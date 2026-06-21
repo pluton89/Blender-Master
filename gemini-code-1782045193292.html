@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blender Helper - IA Assistance 3D</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* === CONFIGURATION & THÈME SOMBRE BLENDER === */
+        :root {
+            --bg-main: #1d1d1d;
+            --bg-sidebar: #151515;
+            --bg-chat: #282828;
+            --bg-input: #333333;
+            --blender-orange: #e87d0d;
+            --blender-orange-hover: #ff9429;
+            --text-main: #e0e0e0;
+            --text-muted: #909090;
+            --border-color: #3d3d3d;
+            --radius: 8px;
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-font-smoothing: antialiased; }
+        body { background-color: var(--bg-main); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+
+        /* Sidebar (Barre Latérale) */
+        .sidebar { width: 280px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 15px; justify-content: space-between; }
+        .logo-container { display: flex; align-items: center; gap: 12px; padding: 10px 5px; margin-bottom: 20px; }
+        .logo-container i { color: var(--blender-orange); font-size: 24px; filter: drop-shadow(0 0 8px rgba(232, 125, 13, 0.4)); }
+        .logo-container h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.5px; }
+        .new-chat-btn { background: transparent; color: var(--text-main); border: 1px dashed var(--border-color); padding: 12px; border-radius: var(--radius); cursor: pointer; display: flex; align-items: center; gap: 10px; font-weight: 500; transition: var(--transition); }
+        .new-chat-btn:hover { border-color: var(--blender-orange); background-color: rgba(232, 125, 13, 0.05); color: var(--blender-orange); }
+        .history-list { flex-grow: 1; margin-top: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .history-item { padding: 10px 12px; border-radius: var(--radius); cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text-muted); transition: var(--transition); }
+        .history-item:hover, .history-item.active { background-color: var(--bg-chat); color: var(--text-main); }
+        .sidebar-footer { border-top: 1px solid var(--border-color); padding-top: 15px; display: flex; align-items: center; justify-content: space-between; color: var(--text-muted); font-size: 14px; }
+        .user-profile { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .user-profile img { width: 32px; height: 32px; border-radius: 50%; background: var(--border-color); }
+
+        /* Conteneur Principal du Chat */
+        .chat-container { flex-grow: 1; display: flex; flex-direction: column; background-color: var(--bg-main); position: relative; }
+        .chat-header { height: 65px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; background-color: rgba(29, 29, 29, 0.8); backdrop-filter: blur(10px); z-index: 10; }
+        .mode-indicator { display: flex; gap: 10px; }
+        .badge { background: var(--bg-chat); border: 1px solid var(--border-color); padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: var(--transition); }
+        .badge:hover, .badge.active { border-color: var(--blender-orange); color: var(--blender-orange); background: rgba(232, 125, 13, 0.05); }
+
+        /* Zone des Messages */
+        .messages-zone { flex-grow: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; gap: 25px; scroll-behavior: smooth; }
+        .message { display: flex; gap: 20px; max-width: 850px; width: 100%; margin: 0 auto; animation: fadeIn 0.3s ease forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .avatar { width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+        .message.user .avatar { background-color: #4a4a4a; }
+        .message.ia .avatar { background-color: var(--blender-orange); color: white; box-shadow: 0 0 10px rgba(232, 125, 13, 0.3); }
+        .bubble { flex-grow: 1; line-height: 1.6; font-size: 15px; }
+        
+        /* Formatage du texte de l'IA (Raccourcis et Menus) */
+        .shortcut { background-color: var(--bg-input); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); font-weight: bold; color: var(--blender-orange-hover); font-size: 14px; }
+        .menu-path { font-style: italic; color: #59b2ff; }
+
+        /* Zone de Saisie de Texte */
+        .input-container { padding: 20px 30px 30px 30px; background-image: linear-gradient(transparent, var(--bg-main) 30%); }
+        .input-box { max-width: 850px; margin: 0 auto; background-color: var(--bg-chat); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 15px; display: flex; align-items: center; gap: 15px; transition: var(--transition); box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .input-box:focus-within { border-color: var(--blender-orange); box-shadow: 0 0 15px rgba(232, 125, 13, 0.15), 0 10px 25px rgba(0,0,0,0.2); }
+        .input-box textarea { flex-grow: 1; background: transparent; border: none; outline: none; color: var(--text-main); font-size: 15px; resize: none; height: 24px; max-height: 150px; }
+        .send-btn { background-color: var(--bg-main); color: var(--text-muted); border: 1px solid var(--border-color); width: 36px; height: 36px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: var(--transition); }
+        .input-box textarea:not(:placeholder-shown) ~ .send-btn { background-color: var(--blender-orange); color: white; border-color: var(--blender-orange); }
+        .input-footer-text { text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        
+        /* Animation de l'IA qui écrit (Trois petits points) */
+        .typing-indicator { display: flex; gap: 4px; padding: 10px 0; }
+        .typing-dot { width: 6px; height: 6px; background: var(--text-muted); border-radius: 50%; animation: typing 1.4s infinite ease-in-out both; }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div>
+            <div class="logo-container">
+                <i class="fa-solid fa-cube"></i>
+                <h1>Blender Helper <span style="color:var(--blender-orange); font-size:10px; vertical-align: super;">AI</span></h1>
+            </div>
+            <button class="new-chat-btn" onclick="window.location.reload();">
+                <i class="fa-solid fa-plus"></i> Nouvelle demande
+            </button>
+            <div class="history-list">
+                <div class="history-item active"><i class="fa-regular fa-message"></i> Assistance Active</div>
+            </div>
+        </div>
+        <div class="sidebar-footer">
+            <div class="user-profile"><img src="https://via.placeholder.com/32" alt="Avatar"><span>Créateur 3D</span></div>
+            <i class="fa-solid fa-gear" style="cursor:pointer;"></i>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="mode-indicator">
+                <div class="badge active"><i class="fa-solid fa-graduation-cap"></i> Mode Expert (Blender Master)</div>
+            </div>
+            <div style="font-size: 13px; color: var(--text-muted);">Moteur Mistral AI Connecté</div>
+        </div>
+
+        <div class="messages-zone" id="messagesZone">
+            <div class="message ia">
+                <div class="avatar"><i class="fa-solid fa-robot"></i></div>
+                <div class="bubble">
+                    <p>Bonjour ! Je suis <strong>Blender Master</strong>. Je possède un savoir absolu sur toutes les facettes de Blender 3D. Quel est ton problème technique aujourd'hui ? Modélisation, lissage, textures PBR, ou un rendu récalcitrant sur Cycles ? Pose-moi ta question !</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-container">
+            <div class="input-box">
+                <i class="fa-solid fa-sparkles" style="color: var(--text-muted);"></i>
+                <textarea id="userInput" placeholder="Pose ta question sur Blender ici... (ex: comment faire un dépliage UV ?)"></textarea>
+                <button class="send-btn" id="sendBtn"><i class="fa-solid fa-arrow-up"></i></button>
+            </div>
+            <div class="input-footer-text">Blender Helper IA peut faire des erreurs, vérifie tes touches <span class="shortcut">Ctrl + Z</span> en cas de pépin !</div>
+        </div>
+    </div>
+
+    <script>
+        // ========================================================
+        // 1. LE CORPS DE CONNAISSANCES DE L'IA (SYSTEM PROMPT)
+        // ========================================================
+        const SYSTEM_PROMPT = `
+Rôle et Identité
+Tu es "Blender Master", l'expert technique et pédagogique ultime sur le logiciel Blender 3D. Tu possèdes un savoir absolu, exhaustif et sans faille sur l'intégralité du logiciel, de la version la plus ancienne aux versions les plus récentes. Ton but est d'accompagner les utilisateurs, du grand débutant au professionnel, en leur fournissant des réponses techniquement irréprochables, précises et faciles à suivre.
+
+Expertise Technique Absolue (Base de Connaissances)
+Tu maîtrises chaque aspect du pipeline 3D dans ses moindres détails. Tu es capable d'expliquer et de guider l'utilisateur sur :
+- L'Interface et la Navigation : La maîtrise absolue du Viewport, des espaces de travail, de l'Outliner, des collections et de tous les raccourcis clavier.
+- La Modélisation Polygonale (Hard Surface et Organique) : L'utilisation de l'Edit Mode, la topologie parfaite (Quads), l'extrusion, le biseau (Bevel), les opérations booléennes, et tous les modificateurs (Subdivision Surface, Mirror, Array, Solidify, etc.).
+- Le Lissage et les Normales : Tu sais parfaitement expliquer la différence entre le Shade Flat et le Shade Smooth, comment utiliser l'Auto Smooth (ou les nœuds de lissage dans les versions récentes), comment recalculer les normales (Maj + N) et régler les problèmes de géométrie.
+- Le Dépliage UV (UV Unwrapping) : Le placement des coutures (Seams), le dépliage optimal pour éviter les étirements, et l'organisation de l'UV Editor.
+- Le Texturing et le Shading : La création de matériaux PBR (Physically Based Rendering), la maîtrise absolue du Shader Editor et du Principled BSDF, le branchement des textures (Albedo, Roughness, Metallic, Normal Map, Bump, Displacement), la peinture de textures (Texture Paint) et l'utilisation du Vertex Color.
+- Le Sculpting : L'utilisation experte de toutes les brosses, la gestion du Dyntopo (Topologie dynamique) et du Remesh.
+- Le Rigging et l'Animation : La création d'armatures (Bones), le Skinning (Weight Paint), la cinématique inverse (IK), l'utilisation de la Timeline, du Dope Sheet, du Graph Editor et l'animation par images clés (Keyframes).
+- L'Éclairage et le Rendu : Le paramétrage expert des moteurs de rendu Eevee (Temps réel, Bloom, Screen Space Reflections) et Cycles (Raytracing, Denoising, Light Paths), ainsi que la gestion des caméras et le réglage des lumières (HDRI, Sun, Point, Area).
+- Systèmes Avancés : Tu as une compréhension profonde des Geometry Nodes, de la simulation physique (Cloth, Rigid Body, Fluides, Particules) et du Compositing.
+
+Méthodologie de Dépannage (Troubleshooting)
+Tu connais les erreurs classiques des débutants et tu sais les anticiper. Avant de proposer une solution complexe, demande à l'utilisateur de vérifier les bases :
+- Le Scale (l'échelle) de l'objet est-il appliqué ? (Ctrl + A)
+- Les normales sont-elles orientées dans le bon sens ?
+- Y a-t-il des sommets superposés ? (Merge by Distance).
+
+Format de tes réponses et Pédagogie
+- Vulgarisation : Si tu abordes un concept complexe (comme le PBR ou la topologie), explique-le d'abord avec des mots simples.
+- Instructions pas-à-pas : Donne des indications de clics exactes (ex: "Va dans le panneau des propriétés à droite, clique sur l'icône de clé à molette bleue (Modifier Properties)").
+- Raccourcis en Gras : Utilise le gras pour tous les raccourcis clavier (ex: Appuie sur Tab pour passer en Edit Mode, puis sur G pour déplacer).
+- Précision du mode : Précise TOUJOURS dans quel mode l'utilisateur doit être (Object Mode, Edit Mode, Sculpt Mode, etc.) pour que l'outil fonctionne.
+- Langue de l'interface : Utilise les termes anglais officiels du logiciel (ex: Shader Editor, Subdivision Surface) même si tu t'exprimes en français, pour éviter que l'utilisateur ne se perde en regardant son écran.
+`;
+
+        // ========================================================
+        // 2. INTERACTIVITÉ DU CHAT ET COMMUICATION AVEC MISTRAL AI
+        // ========================================================
+        const textarea = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const messagesZone = document.getElementById('messagesZone');
+
+        // Création de la mémoire de l'IA contenant l'instruction de base (System Prompt)
+        let conversationHistory = [
+            { role: "system", content: SYSTEM_PROMPT }
+        ];
+
+        // Fonction pour générer visuellement un message dans la fenêtre
+        function appendMessage(role, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', role);
+            
+            const icon = role === 'user' ? 'fa-user' : 'fa-robot';
+            
+            // Formatage léger pour préserver les retours à la ligne
+            const formattedText = text.replace(/\n/g, '<br>');
+
+            messageDiv.innerHTML = `
+                <div class="avatar"><i class="fa-solid ${icon}"></i></div>
+                <div class="bubble"><p>${formattedText}</p></div>
+            `;
+            
+            messagesZone.appendChild(messageDiv);
+            messagesZone.scrollTop = messagesZone.scrollHeight;
+        }
+
+        // Fonction d'envoi asynchrone branchée à l'API de Mistral
+        async function sendMessage() {
+            const userText = textarea.value.trim();
+            if (!userText) return;
+
+            // On affiche le message écrit par le visiteur
+            appendMessage('user', userText);
+            
+            // Sauvegarde dans la mémoire de discussion
+            conversationHistory.push({ role: "user", content: userText });
+            textarea.value = '';
+            
+            // Ajout visuel des 3 petits points de chargement
+            const typingDiv = document.createElement('div');
+            typingDiv.classList.add('message', 'ia');
+            typingDiv.innerHTML = `
+                <div class="avatar"><i class="fa-solid fa-robot"></i></div>
+                <div class="bubble"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>
+            `;
+            messagesZone.appendChild(typingDiv);
+            messagesZone.scrollTop = messagesZone.scrollHeight;
+
+            // ⚠️ ENTRE TES GUILLEMETS ICI : METS TA CLÉ API UNIQUE MISTRAL
+            const MISTRAL_API_KEY = 'TA_CLE_API_MISTRAL_ICI'; 
+
+            try {
+                const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${MISTRAL_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: 'mistral-large-latest', 
+                        messages: conversationHistory,
+                        temperature: 0.3 
+                    })
+                });
+
+                const data = await response.json();
+                messagesZone.removeChild(typingDiv); // Suppression du chargement animée
+
+                if (data.choices && data.choices[0]) {
+                    const iaResponse = data.choices[0].message.content;
+                    
+                    // On affiche le savoir technique renvoyé par Mistral
+                    appendMessage('ia', iaResponse);
+                    conversationHistory.push({ role: "assistant", content: iaResponse });
+                } else {
+                    appendMessage('ia', "Erreur : Impossible de lire la réponse de l'API. Vérifie ton crédit ou ta clé Mistral.");
+                }
+
+            } catch (error) {
+                messagesZone.removeChild(typingDiv);
+                appendMessage('ia', "Désolé, problème de connexion avec l'API Mistral AI. Assure-toi que ta clé est bien insérée.");
+                console.error("Détails erreur :", error);
+            }
+        }
+
+        // ========================================================
+        // 3. ÉCOUTEURS D'ÉVÉNEMENTS CLAVIER / INTERFACE
+        // ========================================================
+        sendBtn.addEventListener('click', sendMessage);
+
+        textarea.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        textarea.addEventListener('input', function() {
+            this.style.height = '24px';
+            this.style.height = (this.scrollHeight) + 'px';
+            
+            if (this.value.trim().length > 0) {
+                sendBtn.style.backgroundColor = 'var(--blender-orange)';
+                sendBtn.style.color = 'white';
+                sendBtn.style.borderColor = 'var(--blender-orange)';
+            } else {
+                sendBtn.style.backgroundColor = 'var(--bg-main)';
+                sendBtn.style.color = 'var(--text-muted)';
+                sendBtn.style.borderColor = 'var(--border-color)';
+            }
+        });
+    </script>
+</body>
+</html>
