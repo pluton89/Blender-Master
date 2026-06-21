@@ -182,8 +182,21 @@ Format de tes réponses et Pédagogie
             
             const icon = role === 'user' ? 'fa-user' : 'fa-robot';
             
-            // Formatage léger pour préserver les retours à la ligne
-            const formattedText = text.replace(/\n/g, '<br>');
+            // ==========================================
+            // CORRECTION ICI : Formatage du texte (Markdown -> HTML)
+            // ==========================================
+            
+            // 1. Les retours à la ligne
+            let formattedText = text.replace(/\n/g, '<br>');
+            
+            // 2. Le texte en GRAS (**texte**)
+            formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // 3. Le texte en ITALIQUE (*texte*)
+            formattedText = formattedText.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            // 4. Les Raccourcis ou bouts de code (`texte`) stylisés avec ta classe CSS .shortcut
+            formattedText = formattedText.replace(/`(.*?)`/g, '<span class="shortcut">$1</span>');
 
             messageDiv.innerHTML = `
                 <div class="avatar"><i class="fa-solid ${icon}"></i></div>
